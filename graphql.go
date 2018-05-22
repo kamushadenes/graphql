@@ -168,7 +168,13 @@ func (c *Client) RunJSON(ctx context.Context, req *Request, resp interface{}) er
 		reqj["variables"] = req.vars
 	}
 
-	requestBody, err := json.Marshal(&reqj)
+	b, err := json.Marshal(&reqj)
+	
+	if err != nil {
+		return err
+	}
+	
+	_, err = requestBody.Write(b)
 	
 	if err != nil {
 		return err
