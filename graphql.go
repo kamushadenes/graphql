@@ -159,6 +159,10 @@ func (c *Client) RunJSON(ctx context.Context, req *Request, resp interface{}) er
 	var requestBody bytes.Buffer
 
 	var reqj map[string]interface{}
+	
+	if reqj == nil {
+		reqj = make(map[string]interface{})
+	}
 
 	reqj["query"] = req.q
 
