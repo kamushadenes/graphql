@@ -150,6 +150,66 @@ func (c *Client) Run(ctx context.Context, req *Request, resp interface{}) error 
 	return nil
 }
 
+func (c *Client) RunJSON(ctx context.Context, req *Request, resp interface{}) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+	var requestBody bytes.Buffer
+
+	var reqj map[string]interface{}
+
+	reqj["query"] = req.q
+
+	var variablesBuf bytes.Buffer
+
+	if len(req.vars) > 0 {
+
+		reqj["variables"] = req.vars
+	}
+
+	requestBody, _ := json.Marshal(&reqj)
+
+	c.logf(">> variables: %s", variablesBuf.String())
+	c.logf(">> files: %d", len(req.files))
+	c.logf(">> query: %s", req.q)
+	gr := &graphResponse{
+		Data: resp,
+	}
+	r, err := http.NewRequest(http.MethodPost, c.endpoint, &requestBody)
+	if err != nil {
+		return err
+	}
+	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("Accept", "application/json")
+	for key, values := range req.Header {
+		for _, value := range values {
+			r.Header.Add(key, value)
+		}
+	}
+	c.logf(">> headers: %v", r.Header)
+	r = r.WithContext(ctx)
+	res, err := c.httpClient.Do(r)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, res.Body); err != nil {
+		return errors.Wrap(err, "reading body")
+	}
+	c.logf("<< %s", buf.String())
+	if err := json.NewDecoder(&buf).Decode(&gr); err != nil {
+		return errors.Wrap(err, "decoding response")
+	}
+	if len(gr.Errors) > 0 {
+		// return first error
+		return gr.Errors[0]
+	}
+	return nil
+}
+
 // WithHTTPClient specifies the underlying http.Client to use when
 // making requests.
 //  NewClient(endpoint, WithHTTPClient(specificHTTPClient))
