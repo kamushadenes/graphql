@@ -165,11 +165,14 @@ func (c *Client) RunJSON(ctx context.Context, req *Request, resp interface{}) er
 	var variablesBuf bytes.Buffer
 
 	if len(req.vars) > 0 {
-
 		reqj["variables"] = req.vars
 	}
 
-	requestBody, _ := json.Marshal(&reqj)
+	requestBody, err := json.Marshal(&reqj)
+	
+	if err != nil {
+		return err
+	}
 
 	c.logf(">> variables: %s", variablesBuf.String())
 	c.logf(">> files: %d", len(req.files))
